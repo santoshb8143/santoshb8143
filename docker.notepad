@@ -1,0 +1,165 @@
+e can copy files from docker host to container and container to host.
+
+Using Docker cp we can copy the files to container
+command :
+docker cp <sourcefile> <containerID/Name:/DestinationPath>-->To copy to Container
+docker cp <containerID/Name:/sourcefile> <DestinationPath>--> To copy from container.
+
+Difference between COPY and docker cp.
+COPY is used to copy files while creating an image,But Docker cp is used to copy files from container to host and host to container.
+
+_________________________________________________________DOCKER FILE__________________________________________________________
+
+Docker file is nothing but a normal file which will have instructions to create a docker image.
+Docker will process the commands from top to bottom.
+Uses Docker Domain Specific Language(DSL) keywords to write docker file.No Programatic Language is used.No Extension.
+To Dockerise any application we need docker file.
+
+
+FROM,MAINTAINER,COPY,ADD,RUN,CMD,ENTRYPOINT,ENV,
+
+FROM-->Indicates base image on top of it we can create our own image.
+FROM <IMAGENAME>
+Ex:FROM tomcat:jdk8.0.1,FROM dtr.tcs.com/java:1.8-jdk.
+InterviewQues: Can I have multiple base images in a docker file.
+Ans:You can have but doesnt make sense/.
+We also have multi stage docker file in which we will build images in multiple stages where we can have FROM instructions in each stage.
+
+
+MAINTAINER-->Author/Owner of the docker file/image just like comment section.
+
+COPY--> Used to copy local files/folders(Part of ur server where you are creating an image) to image while creating an image.
+Ex:COPY <source> <destination>
+COPY target/maven-web-app.war /usr/local/tomcat/webapps/maven-web-app.war
+COPY . . 
+First Dot (.) represents the current working directory where the file is created
+Second Dot(.) represents the working directory of the image where you want to run/copy--tip:for jboss the folder is /opt/jboss/wildfly/deployments.
+
+ADD-->ADD is also copy files to image ;difference is 
+ADD can copy local files and also it can download files from remote (http/https) locations while creating an image.
+If we are adding or downloading any tar files(*.tar) it will add and also extract the file from tar to image.(Only .tar extensions).
+
+ex: ADD https://dlcdn.apache.org/tomcat/tomcat-8/v8.5.72/bin/apache-tomcat-8.5.72.tar
+
+MOST IMP 3 COMMANDS.
+RUN,CMD,ENTRYPOINT.
+
+RUN-->Using RUN we can execute commands to run on top of base image.
+ex:RUN mkdir /app
+RUN yum install java
+RUN curl
+Use Case :RUN is used to install/setup required SW's(create users/groups/install SW's/changemods etc.,)while creating an image.
+We can have n no.of RUN Instructions executed from top to bottom.
+
+
+CMD--> Using CMD we can execute commands ..RUN also same but whats the difference.
+CMD instruction/command used while creating a container.
+Use Case:CMD will be used to start the process of creating a container, while creating a container.
+CMD can be more than one in a docker file but it will process/execute only one (Recent/Last one) CMD.
+
+ENTRYPOINT-->ENTRYPOINT instruction also will be excecuted while creating a container.we can set up an ENTRYPOINT for our container which we wanna execute.
+Difference between CMD and ENTRYPOINT.
+CMD command can be overridden while creating a container.But ENTRYPOINT command can not be overridden while creating container.
+Example of Docker file
+
+FROM centos
+RUN yum install unzip -y
+RUN echo"RUN one"
+RUN echo"RUN Two"
+CMD ['echo',"Welcome From CMD"]
+ENTRYPOINT['Welcome to ENTRYPOINT'] 
+
+We can have both CMD and ENTRYPOINT together in a dockerfile but
+when you give CMD with ENTRYPOINT it takes CMD as an argument for ENTRYPOINT.
+Ex: CMD and ENTRYPOINT together.
+if you always want to execute sh catalina.sh., and sometimes you wanna change it at run time like restart/stop/
+
+ENTRYPOINT["sh", "catalina.sh"]
+CMD["start"]
+
+if you dont pass anything it will execute as sh catalina.sh start by default
+
+But if you use any other command it will take it as a argument
+like docker run imagetwhree restart/stop/
+
+2nd Class DOcker file
+
+WORKDIR-This is the directories path
+Using this we can set a working directory for container.
+So whatever you mention under this WORKDIR it will be executed in that directory only.
+
+likewise every Docker file has this WORKDIR
+
+ENV--> We can set environment variables using ENV.These variables can be  accessable in image (While creating image) and also we can access in container.
+So these ENV variables can be seen in images and as well as in container.
+You can either inspect the image/go inside a container so you can see ENV variables.
+
+LABEL-->These are used to label any particular thing of an image.For Ex:If you want to mention from which branch the image is created you cn label the image.
+so in future if you inspect image it will show from which branch the image is created.
+LABEL branchname development.Labels are key value pair which we can add to an image.
+MetaData is nothing but information about data.
+
+ARG --> its like a variable which we can define and refer in a Docker file.
+at runtime while creating an image we can pass arguments
+InterviewQues:Whats the difference between ENV and ARG
+ARG can be accessible only while creating an image .We can not refer/access in container.
+
+USER-->We can mention the name of user in docker file in which the container can be running of.
+If you dont mention the name of the USER by default the container will run in rootuser.
+You could run Jenkins as a container.
+
+
+EXPOSE--> Its like a Documentation,; it shows on which port our container is listening.
+
+If Developer hardcoded the port into the code and to find out which port to be binded like 1234:????
+you need to go to script for ex:for node js it is app.js..So if you open the file that will show the ports need to be exposed. 
+SO it is recommended inside the docker file itself if you keep exposed ports its good and we can understand which port is listening.
+
+VOLUME-->It is used to persist/mount a directory of container to the host systems directory so that it will not be deleted if the container is deleted.
+
+___________________MULTIPLE FROM or MULTI STAGE DOCKER FILE__________________________________________________________
+basicly we can have multiple stages so that at the end you dont need to have git/maven or any such apps in the end image.
+So multi stage is like 
+
+FROM git as repo 
+git clone https://github.com/santoshb8143/java-web-app-docker.git
+WORKDIR /app
+
+FROM maven3.6.3 as build
+WORKDIR /app
+COPY --from=repo /app/java-web-app-docker /app
+RUN mvn clean install
+
+FROM tomcat-8
+copy --from=build /app/target/java-web-app-docker.war
+usr/local/tomcat/webapps/java-web-app-doocker.war
+
+This is a sample Multistage docker file.
+__________________________________________________________________________________________________________________________
+
+RUN,CMD,ENTRYPOINT instructions can be in either shell form or executable form
+
+SHELL FORM
+===========
+
+RUN <CMD> <ARGS>
+CMD <CMD> <CMD>
+ENTRYPOINT <CMD> <ARGS>
+
+Ex:
+RUN mkdir -p /usr/test
+/bin/bash -c mkdir -p /usr/test
+
+CMD java -jar app.jar
+/bin/bash java -jar app.jar
+
+CMD sh test.sh
+/bin/bash sh test.sh
+
+SO in Shell form its always a child process under the parent process which is bash
+
+Executable FORM
+===============
+
+
+
